@@ -573,6 +573,9 @@ CreateDatabase(void)
 	ret = sql_exec(db, create_settingsTable_sqlite);
 	if( ret != SQLITE_OK )
 		goto sql_failed;
+	ret = sql_exec(db, create_historyTable_sqlite);
+	if( ret != SQLITE_OK )
+		goto sql_failed;
 	ret = sql_exec(db, "INSERT into SETTINGS values ('UPDATE_ID', '0')");
 	if( ret != SQLITE_OK )
 		goto sql_failed;

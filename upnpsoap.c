@@ -804,12 +804,17 @@ add_res(char *size, char *duration, char *bitrate, char *sampleFrequency,
 }
 
 static int
-get_child_count(const char *object, struct magic_container_s *magic)
+get_child_count(const char *object, struct magic_container_s *magic, const char *req_mac)
 {
 	int ret;
 
 	if (magic && magic->child_count)
-		ret = sql_get_int_field(db, "SELECT count(*) from %s", magic->child_count);
+	{
+		if (strncmp(object+1, "$FF1", 4) == 0)
+			ret = sql_get_int_field(db, "SELECT COUNT(*), %Q AS req_mac FROM %s", req_mac, magic->child_count);
+		else
+			ret = sql_get_int_field(db, "SELECT count(*) from %s", magic->child_count);
+	}		
 	else if (magic && magic->objectid && *(magic->objectid))
 		ret = sql_get_int_field(db, "SELECT count(*) from OBJECTS where PARENT_ID = '%s';", *(magic->objectid));
 	else
@@ -830,7 +835,7 @@ object_exists(const char *object)
 #define COLUMNS "o.DETAIL_ID, o.CLASS," \
                 " d.SIZE, d.TITLE, d.DURATION, d.BITRATE, d.SAMPLERATE, d.ARTIST," \
                 " d.ALBUM, d.GENRE, d.COMMENT, d.CHANNELS, d.TRACK, d.DATE, d.RESOLUTION," \
-                " d.THUMBNAIL, d.CREATOR, d.DLNA_PN, d.MIME, d.ALBUM_ART, d.ROTATION, d.DISC "
+                " d.THUMBNAIL, d.CREATOR, d.DLNA_PN, d.MIME, d.ALBUM_ART, d.ROTATION, d.DISC, %Q AS req_mac "
 #define SELECT_COLUMNS "SELECT o.OBJECT_ID, o.PARENT_ID, o.REF_ID, " COLUMNS
 
 static int
@@ -841,6 +846,7 @@ callback(void *args, int argc, char **argv, char **azColName)
 	     *duration = argv[7], *bitrate = argv[8], *sampleFrequency = argv[9], *artist = argv[10], *album = argv[11],
 	     *genre = argv[12], *comment = argv[13], *nrAudioChannels = argv[14], *track = argv[15], *date = argv[16], *resolution = argv[17],
 	     *tn = argv[18], *creator = argv[19], *dlna_pn = argv[20], *mime = argv[21], *album_art = argv[22], *rotate = argv[23], *disc = argv[24];
+	char *req_mac = argv[25];
 	char dlna_buf[128];
 	const char *ext;
 	struct string_s *str = passed_args->str;
@@ -1023,7 +1029,7 @@ callback(void *args, int argc, char **argv, char **azColName)
 		}
 		if( (passed_args->filter & FILTER_BOOKMARK_MASK) ) {
 			/* Get bookmark */
-			int sec = sql_get_int_field(db, "SELECT SEC from BOOKMARKS where ID = '%s'", detailID);
+			int sec = sql_get_int_field(db, "SELECT SEC from BOOKMARKS where DETAIL_ID = '%s' and CLIENT_MAC = '%s'", detailID, req_mac);
 			if( sec > 0 ) {
 				/* This format is wrong according to the UPnP/AV spec.  It should be in duration format,
 				** so HH:MM:SS. But Kodi seems to be the only user of this tag, and it only works with a
@@ -1041,7 +1047,7 @@ callback(void *args, int argc, char **argv, char **azColName)
 			}
 			if( passed_args->filter & FILTER_UPNP_PLAYBACKCOUNT ) {
 				ret = strcatf(str, "&lt;upnp:playbackCount&gt;%d&lt;/upnp:playbackCount&gt;",
-				              sql_get_int_field(db, "SELECT WATCH_COUNT from BOOKMARKS where ID = '%s'", detailID));
+				              sql_get_int_field(db, "SELECT WATCH_COUNT from BOOKMARKS where DETAIL_ID = '%s' and CLIENT_MAC = '%s'", detailID, req_mac));
 			}
 		}
 		free(alt_title);
@@ -1238,7 +1244,7 @@ callback(void *args, int argc, char **argv, char **azColName)
 			ret = strcatf(str, "searchable=\"%d\" ", check_magic_container(id, passed_args->flags) ? 0 : 1);
 		}
 		if( passed_args->filter & FILTER_CHILDCOUNT ) {
-			ret = strcatf(str, "childCount=\"%d\"", get_child_count(id, check_magic_container(id, passed_args->flags)));
+			ret = strcatf(str, "childCount=\"%d\"", get_child_count(id, check_magic_container(id, passed_args->flags), req_mac));
 		}
 		/* If the client calls for BrowseMetadata on root, we have to include our "upnp:searchClass"'s, unless they're filtered out */
 		if( passed_args->requested == 1 && strcmp(id, "0") == 0 && (passed_args->filter & FILTER_UPNP_SEARCHCLASS) ) {
@@ -1313,6 +1319,7 @@ BrowseContentDirectory(struct upnphttp * h, const char * action)
 	const char *objectid_sql = "o.OBJECT_ID";
 	const char *parentid_sql = "o.PARENT_ID";
 	const char *refid_sql = "o.REF_ID";
+	const char *left_join = NULL;
 	char where[256] = "";
 	char *orderBy = NULL;
 	struct NameValueParserData data;
@@ -1402,7 +1409,7 @@ BrowseContentDirectory(struct upnphttp * h, const char * action)
 		sql = sqlite3_mprintf("SELECT %s, %s, %s, " COLUMNS
 				      "from OBJECTS o left join DETAILS d on (d.ID = o.DETAIL_ID)"
 				      " where OBJECT_ID = '%q';",
-				      objectid_sql, parentid_sql, refid_sql, id);
+				      objectid_sql, parentid_sql, refid_sql, h->req_client->macstr, id);
 		ret = sqlite3_exec(db, sql, callback, (void *) &args, &zErrMsg);
 		totalMatches = args.returned;
 	}
@@ -1419,6 +1426,8 @@ BrowseContentDirectory(struct upnphttp * h, const char * action)
 				parentid_sql = magic->parentid_sql;
 			if (magic->refid_sql)
 				refid_sql = magic->refid_sql;
+			if (magic->left_join)
+				left_join = magic->left_join;
 			if (magic->where)
 				strncpyt(where, magic->where, sizeof(where));
 			if (magic->orderby && !GETFLAG(DLNA_STRICT_MASK))
@@ -1426,7 +1435,7 @@ BrowseContentDirectory(struct upnphttp * h, const char * action)
 			if (magic->max_count > 0)
 			{
 				int limit = MAX(magic->max_count - StartingIndex, 0);
-				ret = get_child_count(ObjectID, magic);
+				ret = get_child_count(ObjectID, magic, h->req_client->macstr);
 				totalMatches = MIN(ret, limit);
 				if (RequestedCount > limit || RequestedCount < 0)
 					RequestedCount = limit;
@@ -1436,7 +1445,7 @@ BrowseContentDirectory(struct upnphttp * h, const char * action)
 			sqlite3_snprintf(sizeof(where), where, "PARENT_ID = '%q'", ObjectID);
 
 		if (!totalMatches)
-			totalMatches = get_child_count(ObjectID, magic);
+			totalMatches = get_child_count(ObjectID, magic, h->req_client->macstr);
 		ret = 0;
 		if (SortCriteria && !orderBy)
 		{
@@ -1477,9 +1486,9 @@ BrowseContentDirectory(struct upnphttp * h, const char * action)
 		}
 
 		sql = sqlite3_mprintf("SELECT %s, %s, %s, " COLUMNS
-				      "from OBJECTS o left join DETAILS d on (d.ID = o.DETAIL_ID)"
+				      "from OBJECTS o left join DETAILS d on (d.ID = o.DETAIL_ID) %s"
 				      " where %s %s limit %d, %d;",
-				      objectid_sql, parentid_sql, refid_sql,
+				      objectid_sql, parentid_sql, refid_sql, h->req_client->macstr, THISORNUL(left_join),
 				      where, THISORNUL(orderBy), StartingIndex, RequestedCount);
 		DPRINTF(E_DEBUG, L_HTTP, "Browse SQL: %s\n", sql);
 		ret = sqlite3_exec(db, sql, callback, (void *) &args, &zErrMsg);
@@ -1941,11 +1950,12 @@ SearchContentDirectory(struct upnphttp * h, const char * action)
 	                      " where OBJECT_ID glob '%q%s' and (%s) %s "
 	                      "%z %s"
 	                      " limit %d, %d",
+	                      h->req_client->macstr,
 	                      ContainerID, sep, where, groupBy,
 	                      (*ContainerID == '*') ? NULL :
 	                      sqlite3_mprintf("UNION ALL " SELECT_COLUMNS
 	                                      "from OBJECTS o left join DETAILS d on (d.ID = o.DETAIL_ID)"
-	                                      " where OBJECT_ID = '%q' and (%s) ", ContainerID, where),
+	                                      " where OBJECT_ID = '%q' and (%s) ", h->req_client->macstr, ContainerID, where),
 	                      orderBy, StartingIndex, RequestedCount);
 	DPRINTF(E_DEBUG, L_HTTP, "Search SQL: %s\n", sql);
 	ret = sqlite3_exec(db, sql, callback, (void *) &args, &zErrMsg);
@@ -2019,28 +2029,28 @@ QueryStateVariable(struct upnphttp * h, const char * action)
 	ClearNameValueList(&data);
 }
 
-static int _set_watch_count(long long id, const char *old, const char *new)
+static int _set_watch_count(long long detail_id, const char *old, const char *new)
 {
 	int64_t rowid = sqlite3_last_insert_rowid(db);
 	int ret;
 
-	ret = sql_exec(db, "INSERT or IGNORE into BOOKMARKS (ID, WATCH_COUNT)"
-			   " VALUES (%lld, %Q)", id, new ?: "1");
+	ret = sql_exec(db, "INSERT or IGNORE into BOOKMARKS (DETAIL_ID, WATCH_COUNT)"
+			   " VALUES (%lld, %Q)", detail_id, new ?: "1");
 	if (sqlite3_last_insert_rowid(db) != rowid)
 		return 0;
 
 	if (!new) /* Increment */
 		ret = sql_exec(db, "UPDATE BOOKMARKS set WATCH_COUNT ="
 				   " ifnull(WATCH_COUNT,'0') + 1"
-				   " where ID = %lld", id);
+				   " where DETAIL_ID = %lld", detail_id);
 	else if (old && old[0])
 		ret = sql_exec(db, "UPDATE BOOKMARKS set WATCH_COUNT = %Q"
-				   " where WATCH_COUNT = %Q and ID = %lld",
-				   new, old, id);
+				   " where WATCH_COUNT = %Q and DETAIL_ID = %lld",
+				   new, old, detail_id);
 	else
 		ret = sql_exec(db, "UPDATE BOOKMARKS set WATCH_COUNT = %Q"
-				   " where ID = %lld",
-				   new, id);
+				   " where DETAIL_ID = %lld",
+				   new, detail_id);
 	return ret;
 }
 
@@ -2145,11 +2155,11 @@ static void UpdateObject(struct upnphttp * h, const char * action)
 				sec = 0;
 			else
 				sec -= 1;
-			ret = sql_exec(db, "INSERT OR IGNORE into BOOKMARKS (ID, SEC)"
-					   " VALUES (%lld, %d)", (long long)detailID, sec);
+			ret = sql_exec(db, "INSERT OR IGNORE into BOOKMARKS (DETAIL_ID, CLIENT_MAC, SEC)"
+					   " VALUES (%lld, '%s', %d)", (long long)detailID, h->req_client->macstr, sec);
 			ret = sql_exec(db, "UPDATE BOOKMARKS set SEC = %d"
-					   " where SEC = %Q and ID = %lld",
-					   sec, current, (long long)detailID);
+					   " where SEC = %Q and DETAIL_ID = %lld and CLIENT_MAC = '%s'",
+					   sec, current, (long long)detailID, h->req_client->macstr);
 		}
 		else
 			DPRINTF(E_WARN, L_HTTP, "Tag %s unsupported for writing\n", tag);
@@ -2242,11 +2252,11 @@ SamsungSetBookmark(struct upnphttp * h, const char * action)
 		}
 		if ( sec < 30 )
 			sec = 0;
-		ret = sql_exec(db, "INSERT OR IGNORE into BOOKMARKS (ID, SEC)"
-				   " VALUES (%lld, %d)", (long long)detailID, sec);
+		ret = sql_exec(db, "INSERT OR IGNORE into BOOKMARKS (DETAIL_ID, CLIENT_MAC, SEC)"
+				   " VALUES (%lld, '%s', %d)", (long long)detailID, h->req_client->macstr, sec);
 		ret = sql_exec(db, "UPDATE BOOKMARKS set SEC = %d"
-				   " where ID = %lld",
-				   sec, (long long)detailID);
+				   " where DETAIL_ID = %lld and CLIENT_MAC = '%s'",
+				   sec, (long long)detailID, h->req_client->macstr);
 		if( ret != SQLITE_OK )
 			DPRINTF(E_WARN, L_METADATA, "Error setting bookmark %s on ObjectID='%s'\n", PosSecond, rid);
 		BuildSendAndCloseSoapResp(h, resp, sizeof(resp)-1);
