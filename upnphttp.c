@@ -98,6 +98,7 @@ enum event_type {
 };
 
 static void SendResp_icon(struct upnphttp *, char * url);
+static void SendResp_favicon(struct upnphttp * h);
 static void SendResp_albumArt(struct upnphttp *, char * url);
 static void SendResp_caption(struct upnphttp *, char * url);
 static void SendResp_resizedimg(struct upnphttp *, char * url);
@@ -678,6 +679,36 @@ SendResp_presentation(struct upnphttp * h)
 	CloseSocket_upnphttp(h);
 }
 
+/* clear history */
+static void
+SendResp_clear_history(struct upnphttp * h)
+{
+	struct string_s str;
+	char body[4096];
+	int64_t count = 0;
+	
+	INIT_STR(str, body);
+	
+	h->respflags = FLAG_HTML;
+	
+	strcatf(&str,
+		"<HTML><HEAD><TITLE>" SERVER_NAME " " MINIDLNA_VERSION "</TITLE></HEAD>"
+		"<BODY><div style=\"text-align: center\">"
+		"<h2>" SERVER_NAME " status</h2></div>");
+	strcatf(&str, "<h3>Clear History</h3>" );
+	if (sql_exec(db, "DELETE FROM history") == SQLITE_OK)
+		strcatf(&str, "Success");
+	else
+		strcatf(&str, "Failure");
+	
+	count = sql_get_int64_field(db, "SELECT CHANGES();");
+	strcatf(&str, " (%lld cleared)</BODY></HTML>\r\n", (long long) count);
+	
+	BuildResp_upnphttp(h, str.data, str.off);
+	SendResp_upnphttp(h);
+	CloseSocket_upnphttp(h);
+}
+
 /* ProcessHTTPPOST_upnphttp()
  * executes the SOAP query if it is possible */
 static void
@@ -1046,6 +1077,14 @@ ProcessHttpQuery_upnphttp(struct upnphttp * h)
 		{
 			SendResp_presentation(h);
 		}
+		else if(strncmp(HttpUrl, "/ClearHistory", 13) == 0)
+		{
+			SendResp_clear_history(h);
+		}
+		else if(strncmp(HttpUrl, "/favicon.ico", 12) == 0)
+		{
+			SendResp_favicon(h);
+    }    
 		else if(strcmp(HttpUrl, "/") == 0)
 		{
 			#ifdef READYNAS
@@ -1462,6 +1501,37 @@ SendResp_icon(struct upnphttp * h, char * icon)
 
 	start_dlna_header(&str, 200, "Interactive", mime);
 	strcatf(&str, "Content-Length: %d\r\n\r\n", size);
+
+	if( send_data(h, str.data, str.off, MSG_MORE) == 0 )
+	{
+		if( h->req_command != EHead )
+			send_data(h, data, size, 0);
+	}
+	CloseSocket_upnphttp(h);
+}
+
+static void
+SendResp_favicon(struct upnphttp * h)
+{
+	char header[512], date[30], *data, *mime = "image/x-icon";
+	int size;
+	struct string_s str;
+	time_t now;
+
+	data = (char *)favicon;
+	size = sizeof(favicon)-1;
+
+	INIT_STR(str, header);
+
+	now = time(NULL);
+	strftime(date, sizeof(date),"%a, %d %b %Y %H:%M:%S GMT" , gmtime(&now));
+	strcatf(&str, "HTTP/1.1 200 OK\r\n"
+	             "Connection: close\r\n"
+	             "Date: %s\r\n"
+	             "Server: " MINIDLNA_SERVER_STRING "\r\n"
+	             "Content-Type: %s\r\n"
+	             "Content-Length: %d\r\n\r\n",
+	             date, mime, size);
 
 	if( send_data(h, str.data, str.off, MSG_MORE) == 0 )
 	{
@@ -2148,6 +2218,9 @@ SendResp_dlnafile(struct upnphttp *h, char *object)
 			send_file(h, sendfh, offset, h->req_RangeEnd);
 	}
 	close(sendfh);
+
+	/* update history */
+	sql_exec(db, "INSERT OR REPLACE INTO history (detail_id, client_mac, atime) VALUES (%lld, %Q, (SELECT strftime(\"%%s\", 'now')));", (long long) id, h->req_client->macstr);
 
 	CloseSocket_upnphttp(h);
 error:

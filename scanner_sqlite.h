@@ -69,9 +69,11 @@ char create_captionTable_sqlite[] = "CREATE TABLE CAPTIONS ("
 					");";
 
 char create_bookmarkTable_sqlite[] = "CREATE TABLE BOOKMARKS ("
-					"ID INTEGER PRIMARY KEY, "
+					"DETAIL_ID INTEGER, "
+					"CLIENT_MAC TEXT NOT NULL, "
 					"SEC INTEGER, "
-					"WATCH_COUNT INTEGER"
+					"WATCH_COUNT INTEGER, "
+					"PRIMARY KEY (DETAIL_ID, CLIENT_MAC)"
 					");";
 
 char create_playlistTable_sqlite[] = "CREATE TABLE PLAYLISTS ("
@@ -86,4 +88,11 @@ char create_playlistTable_sqlite[] = "CREATE TABLE PLAYLISTS ("
 char create_settingsTable_sqlite[] = "CREATE TABLE SETTINGS ("
 					"KEY TEXT NOT NULL, "
 					"VALUE TEXT"
+					");";
+
+char create_historyTable_sqlite[] = "CREATE TABLE HISTORY ("
+					"DETAIL_ID INTEGER, "
+					"CLIENT_MAC TEXT, "
+					"ATIME INTEGER, "
+					"PRIMARY KEY (DETAIL_ID, CLIENT_MAC)"
 					");";

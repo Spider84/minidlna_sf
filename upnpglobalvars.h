@@ -230,6 +230,9 @@ extern char serialnumber[];
 #define PRESENTATIONURL_MAX_LEN 64
 extern char presentationurl[];
 
+#define HTTP_HOST_NAME_MAX_LEN 64
+extern char http_host_name[];
+
 /* lan addresses */
 extern int n_lan_addr;
 extern struct lan_addr_s lan_addr[];
