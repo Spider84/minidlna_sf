@@ -57,6 +57,7 @@ minidlnad_LDADD = \
 	@LIBAVFORMAT_LIBS@ \
 	@LIBEXIF_LIBS@ \
 	@LIBPNG_LIBS@ \
+	@LIBFFMPEGTHUMBNAILER_LIBS@ \
 	@LIBINTL@ \
 	@LIBICONV@ \
 	-lFLAC $(flacogglibs) $(vorbislibs) $(avahilibs)
