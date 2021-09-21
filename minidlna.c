@@ -976,6 +976,9 @@ init(int argc, char **argv)
 			if (!strtobool(ary_options[i].value))
 				CLEARFLAG(SUBTITLES_MASK);
 			break;
+		case HTTP_HOST_NAME:
+			strncpyt(http_host_name, ary_options[i].value, HTTP_HOST_NAME_MAX_LEN);
+			break;
 		case PNG_ICON_SM:
 			set_user_icon (ICON_PNG_SM, ary_options[i].value);
 			break;

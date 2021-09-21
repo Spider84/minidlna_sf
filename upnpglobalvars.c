@@ -71,6 +71,8 @@ char serialnumber[SERIALNUMBER_MAX_LEN] = "00000000";
  * http://nnn.nnn.nnn.nnn:ppppp/  => max 30 bytes including terminating 0 */
 char presentationurl[PRESENTATIONURL_MAX_LEN];
 
+char http_host_name[HTTP_HOST_NAME_MAX_LEN];
+
 int n_lan_addr = 0;
 struct lan_addr_s lan_addr[MAX_LAN_ADDR];
 int sssdp = -1;
