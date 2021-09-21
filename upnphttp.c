@@ -82,6 +82,7 @@
 #include "clients.h"
 #include "process.h"
 #include "sendfile.h"
+#include "icons.h"
 
 #define MAX_BUFFER_SIZE 2147483647
 #define MIN_BUFFER_SIZE 65536
@@ -1425,29 +1426,29 @@ SendResp_icon(struct upnphttp * h, char * icon)
 	if( strcmp(icon, "sm.png") == 0 )
 	{
 		DPRINTF(E_DEBUG, L_HTTP, "Sending small PNG icon\n");
-		data = (char *)png_sm;
-		size = sizeof(png_sm)-1;
+		data = (char *)icons.icon[ICON_PNG_SM];
+		size = icons.size[ICON_PNG_SM];
 		strcpy(mime+6, "png");
 	}
 	else if( strcmp(icon, "lrg.png") == 0 )
 	{
 		DPRINTF(E_DEBUG, L_HTTP, "Sending large PNG icon\n");
-		data = (char *)png_lrg;
-		size = sizeof(png_lrg)-1;
+		data = (char *)icons.icon[ICON_PNG_LRG];
+		size = icons.size[ICON_PNG_LRG];
 		strcpy(mime+6, "png");
 	}
 	else if( strcmp(icon, "sm.jpg") == 0 )
 	{
 		DPRINTF(E_DEBUG, L_HTTP, "Sending small JPEG icon\n");
-		data = (char *)jpeg_sm;
-		size = sizeof(jpeg_sm)-1;
+		data = (char *)icons.icon[ICON_JPEG_SM];
+		size = icons.size[ICON_JPEG_SM];
 		strcpy(mime+6, "jpeg");
 	}
 	else if( strcmp(icon, "lrg.jpg") == 0 )
 	{
 		DPRINTF(E_DEBUG, L_HTTP, "Sending large JPEG icon\n");
-		data = (char *)jpeg_lrg;
-		size = sizeof(jpeg_lrg)-1;
+		data = (char *)icons.icon[ICON_JPEG_LRG];
+		size = icons.size[ICON_JPEG_LRG];
 		strcpy(mime+6, "jpeg");
 	}
 	else
@@ -1662,10 +1663,11 @@ SendResp_resizedimg(struct upnphttp * h, char * object)
 	int rows=0, chunked, ret;
 	image_s *imsrc = NULL, *imdst = NULL;
 	int scale = 1;
-	const char *tmode;
+	const char *tmode;	
+	int png = 0, alpha;
 
 	id = strtoll(object, &saveptr, 10);
-	snprintf(buf, sizeof(buf), "SELECT PATH, RESOLUTION, ROTATION from DETAILS where ID = '%lld'", (long long)id);
+	snprintf(buf, sizeof(buf), "SELECT PATH, RESOLUTION, ROTATION, MIME from DETAILS where ID = '%lld'", (long long)id);
 	ret = sql_get_table(db, buf, &result, &rows, NULL);
 	if( ret != SQLITE_OK )
 	{
@@ -1674,10 +1676,10 @@ SendResp_resizedimg(struct upnphttp * h, char * object)
 	}
 	if( rows )
 	{
-		file_path = result[3];
-		resolution = result[4];
-                if (result[5])
-			rotate = atoi(result[5]);
+		file_path = result[4];
+		resolution = result[5];
+                if (result[6])
+			rotate = atoi(result[6]);
 	}
 	if( !file_path || !resolution || (access(file_path, F_OK) != 0) )
 	{
@@ -1686,6 +1688,20 @@ SendResp_resizedimg(struct upnphttp * h, char * object)
 		Send404(h);
 		return;
 	}
+
+	png = (strncmp (result[7], "image/png", 9) == 0);
+
+#ifndef HAVE_LIBPNG
+	if (png)
+	{
+		DPRINTF(E_MAXDEBUG, L_HTTP,
+				"%s (%s): Not supported for PNG, responding ERROR 404\n",
+				object, file_path);
+		sqlite3_free_table(result);
+		Send404(h);
+		return;
+	}
+#endif
 
 	if( saveptr )
 		saveptr = strchr(saveptr, '?');
@@ -1810,7 +1826,11 @@ SendResp_resizedimg(struct upnphttp * h, char * object)
 	if( strcmp(h->HttpVer, "HTTP/1.0") == 0 )
 	{
 		chunked = 0;
-		imsrc = image_new_from_jpeg(file_path, 1, NULL, 0, scale, rotate);
+		imsrc = 
+#ifdef HAVE_LIBPNG
+			png ? image_new_from_png(file_path, 1, NULL, 0, scale, rotate, &alpha) :
+#endif		
+			image_new_from_jpeg(file_path, 1, NULL, 0, scale, rotate);
 	}
 	else
 	{
@@ -1828,6 +1848,10 @@ SendResp_resizedimg(struct upnphttp * h, char * object)
 		}
 
 		imdst = image_resize(imsrc, dstw, dsth);
+#ifdef HAVE_LIBPNG
+		if (png && alpha)
+			image_bgcolor_composite (imdst, BGCOLOR);
+#endif
 		data = image_save_to_jpeg_buf(imdst, &size);
 
 		strcatf(&str, "Content-Length: %d\r\n\r\n", size);
@@ -1837,7 +1861,11 @@ SendResp_resizedimg(struct upnphttp * h, char * object)
 	{
 		if( chunked )
 		{
-			imsrc = image_new_from_jpeg(file_path, 1, NULL, 0, scale, rotate);
+			imsrc = 
+#ifdef HAVE_LIBPNG
+				png ? image_new_from_png(file_path, 1, NULL, 0, scale, rotate, &alpha) :
+#endif
+				image_new_from_jpeg(file_path, 1, NULL, 0, scale, rotate);
 			if( !imsrc )
 			{
 				DPRINTF(E_WARN, L_HTTP, "Unable to open image %s!\n", file_path);
@@ -1845,6 +1873,10 @@ SendResp_resizedimg(struct upnphttp * h, char * object)
 				goto resized_error;
 			}
 			imdst = image_resize(imsrc, dstw, dsth);
+#ifdef HAVE_LIBPNG
+			if (png && alpha)
+				image_bgcolor_composite (imdst, BGCOLOR);
+#endif			
 			data = image_save_to_jpeg_buf(imdst, &size);
 
 			ret = sprintf(buf, "%x\r\n", size);

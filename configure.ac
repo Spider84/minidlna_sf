@@ -411,6 +411,20 @@ for dir in "" /usr/local $SEARCH_DIR; do
     if test -n "$dir"; then
         LDFLAGS="$LDFLAGS -L$dir/lib"
     fi
+    AC_CHECK_LIB([png], [png_read_png], [LIBPNG_LIBS="-lpng"
+          AM_CONDITIONAL(HAVE_LIBPNG, true)
+		  AC_DEFINE(HAVE_LIBPNG,1,[Define to 1 if you have libpng]),
+		  AM_CONDITIONAL(HAVE_LIBPNG, false)], [unset ac_cv_lib_png_png_read_png; LDFLAGS="$LDFLAGS_SAVE"; continue])
+    break
+done
+test x"$ac_cv_lib_png_png_read_png" = x"yes" || AC_MSG_ERROR([Could not find libpng])
+AC_SUBST(LIBPNG_LIBS)
+
+LDFLAGS_SAVE="$LDFLAGS"
+for dir in "" /usr/local $SEARCH_DIR; do
+    if test -n "$dir"; then
+        LDFLAGS="$LDFLAGS -L$dir/lib"
+    fi
     AC_CHECK_LIB([id3tag -lz], [id3_file_open], [LIBID3TAG_LIBS="-lid3tag -lz"], [unset ac_cv_lib_id3tag_id3_file_open; LDFLAGS="$LDFLAGS_SAVE"; continue])
     break
 done
