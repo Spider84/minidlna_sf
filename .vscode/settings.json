@@ -1,0 +1,10 @@
+{
+    "cquery.cacheDirectory": "${workspaceFolder}/.vscode/cquery_cached_index/",
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/spider/Documents/minidlna",
+            "binaryPath": "/home/spider/Documents/minidlna/minidlnad",
+            "binaryArgs": ["-f", "./minidlna.conf", "-d"]
+        }
+    ]
+}

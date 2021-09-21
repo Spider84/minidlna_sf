@@ -75,7 +75,14 @@ static const struct {
 	{ PNG_ICON_LRG, "png_icon_lrg" },
 	{ JPEG_ICON_SM, "jpeg_icon_sm" },
 	{ JPEG_ICON_LRG, "jpeg_icon_lrg" },
-	{ HTTP_HOST_NAME, "http_host_name" },
+	{ HTTP_HOST_NAME, "http_host_name" },  
+#ifdef THUMBNAIL_CREATION
+	{ USER_ACCOUNT, "user" },
+	{ ENABLE_THUMB, "enable_thumbnail" },
+	{ THUMB_WIDTH, "thumbnail_width" },
+	{ THUMB_QUALITY, "thumbnail_quality" },
+	{ ENABLE_THUMB_FILMSTRIP, "enable_thumbnail_filmstrip" },
+#endif
 };
 
 int

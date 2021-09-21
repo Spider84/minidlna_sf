@@ -1,0 +1,142 @@
+make all --dry-run --keep-going --print-directory
+make: Entering directory '/home/spider/Documents/minidlna'
+test -f config.h || rm -f stamp-h1
+test -f config.h || make  stamp-h1
+ 
+make  all-recursive
+ 
+make[1]: Entering directory '/home/spider/Documents/minidlna'
+fail=; \
+if (target_option=k; case ${target_option-} in ?) ;; *) echo "am__make_running_with_option: internal error: invalid" "target option '${target_option-}' specified" >&2; exit 1;; esac; has_opt=no; sane_makeflags=$MAKEFLAGS; if { if test -z '1'; then false; elif test -n 'x86_64-pc-linux-gnu'; then true; elif test -n '4.2.1' && test -n '/home/spider/Documents/minidlna'; then true; else false; fi; }; then sane_makeflags=$MFLAGS; else case $MAKEFLAGS in *\\[\ \	]*) bs=\\; sane_makeflags=`printf '%s\n' "$MAKEFLAGS" | sed "s/$bs$bs[$bs $bs	]*//g"`;; esac; fi; skip_next=no; strip_trailopt () { flg=`printf '%s\n' "$flg" | sed "s/$1.*$//"`; }; for flg in $sane_makeflags; do test $skip_next = yes && { skip_next=no; continue; }; case $flg in *=*|--*) continue;; -*I) strip_trailopt 'I'; skip_next=yes;; -*I?*) strip_trailopt 'I';; -*O) strip_trailopt 'O'; skip_next=yes;; -*O?*) strip_trailopt 'O';; -*l) strip_trailopt 'l'; skip_next=yes;; -*l?*) strip_trailopt 'l';; -[dEDm]) skip_next=yes;; -[JT]) skip_next=yes;; esac; case $flg in *$target_option*) has_opt=yes; break;; esac; done; test $has_opt = yes); then \
+  failcom='fail=yes'; \
+else \
+  failcom='exit 1'; \
+fi; \
+dot_seen=no; \
+target=`echo all-recursive | sed s/-recursive//`; \
+case "all-recursive" in \
+  distclean-* | maintainer-clean-*) list='po' ;; \
+  *) list='po' ;; \
+esac; \
+for subdir in $list; do \
+  echo "Making $target in $subdir"; \
+  if test "$subdir" = "."; then \
+    dot_seen=yes; \
+    local_target="$target-am"; \
+  else \
+    local_target="$target"; \
+  fi; \
+  (CDPATH="${ZSH_VERSION+.}:" && cd $subdir && make  $local_target) \
+  || eval $failcom; \
+done; \
+if test "$dot_seen" = "no"; then \
+  make  "$target-am" || exit 1; \
+fi; test -z "$fail"
+ 
+Making all in po
+ 
+make[2]: Entering directory '/home/spider/Documents/minidlna/po'
+test "0.18" = "0.18" \
+  || { echo "*** error: gettext infrastructure mismatch: using a Makefile.in.in from gettext version 0.18 but the autoconf macros are from gettext version 0.18" 1>&2; \
+       exit 1; \
+     }
+make[2]: Leaving directory '/home/spider/Documents/minidlna/po'
+ 
+make[2]: Entering directory '/home/spider/Documents/minidlna'
+test -f config.h || rm -f stamp-h1
+test -f config.h || make  stamp-h1
+ 
+echo "  CC      " minidlna.o;depbase=`echo minidlna.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT minidlna.o -MD -MP -MF $depbase.Tpo -c -o minidlna.o minidlna.c &&\
+mv -f $depbase.Tpo $depbase.Po
+ 
+echo "  CC      " upnphttp.o;depbase=`echo upnphttp.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT upnphttp.o -MD -MP -MF $depbase.Tpo -c -o upnphttp.o upnphttp.c &&\
+mv -f $depbase.Tpo $depbase.Po
+ 
+echo "  CC      " upnpdescgen.o;depbase=`echo upnpdescgen.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT upnpdescgen.o -MD -MP -MF $depbase.Tpo -c -o upnpdescgen.o upnpdescgen.c &&\
+mv -f $depbase.Tpo $depbase.Po
+ 
+echo "  CC      " upnpsoap.o;depbase=`echo upnpsoap.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT upnpsoap.o -MD -MP -MF $depbase.Tpo -c -o upnpsoap.o upnpsoap.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " clients.o;depbase=`echo clients.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT clients.o -MD -MP -MF $depbase.Tpo -c -o clients.o clients.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " getifaddr.o;depbase=`echo getifaddr.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT getifaddr.o -MD -MP -MF $depbase.Tpo -c -o getifaddr.o getifaddr.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " process.o;depbase=`echo process.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT process.o -MD -MP -MF $depbase.Tpo -c -o process.o process.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " upnpglobalvars.o;depbase=`echo upnpglobalvars.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT upnpglobalvars.o -MD -MP -MF $depbase.Tpo -c -o upnpglobalvars.o upnpglobalvars.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " options.o;depbase=`echo options.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT options.o -MD -MP -MF $depbase.Tpo -c -o options.o options.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " minissdp.o;depbase=`echo minissdp.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT minissdp.o -MD -MP -MF $depbase.Tpo -c -o minissdp.o minissdp.c &&\
+mv -f $depbase.Tpo $depbase.Po
+ 
+echo "  CC      " uuid.o;depbase=`echo uuid.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT uuid.o -MD -MP -MF $depbase.Tpo -c -o uuid.o uuid.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " upnpevents.o;depbase=`echo upnpevents.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT upnpevents.o -MD -MP -MF $depbase.Tpo -c -o upnpevents.o upnpevents.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " sql.o;depbase=`echo sql.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT sql.o -MD -MP -MF $depbase.Tpo -c -o sql.o sql.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " utils.o;depbase=`echo utils.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT utils.o -MD -MP -MF $depbase.Tpo -c -o utils.o utils.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " metadata.o;depbase=`echo metadata.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT metadata.o -MD -MP -MF $depbase.Tpo -c -o metadata.o metadata.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " scanner.o;depbase=`echo scanner.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT scanner.o -MD -MP -MF $depbase.Tpo -c -o scanner.o scanner.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " monitor.o;depbase=`echo monitor.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT monitor.o -MD -MP -MF $depbase.Tpo -c -o monitor.o monitor.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " tivo_utils.o;depbase=`echo tivo_utils.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT tivo_utils.o -MD -MP -MF $depbase.Tpo -c -o tivo_utils.o tivo_utils.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " tivo_beacon.o;depbase=`echo tivo_beacon.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT tivo_beacon.o -MD -MP -MF $depbase.Tpo -c -o tivo_beacon.o tivo_beacon.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " tivo_commands.o;depbase=`echo tivo_commands.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT tivo_commands.o -MD -MP -MF $depbase.Tpo -c -o tivo_commands.o tivo_commands.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " playlist.o;depbase=`echo playlist.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT playlist.o -MD -MP -MF $depbase.Tpo -c -o playlist.o playlist.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " image_utils.o;depbase=`echo image_utils.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT image_utils.o -MD -MP -MF $depbase.Tpo -c -o image_utils.o image_utils.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " albumart.o;depbase=`echo albumart.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT albumart.o -MD -MP -MF $depbase.Tpo -c -o albumart.o albumart.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " log.o;depbase=`echo log.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT log.o -MD -MP -MF $depbase.Tpo -c -o log.o log.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " containers.o;depbase=`echo containers.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT containers.o -MD -MP -MF $depbase.Tpo -c -o containers.o containers.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " avahi.o;depbase=`echo avahi.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT avahi.o -MD -MP -MF $depbase.Tpo -c -o avahi.o avahi.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " tagutils/tagutils.o;depbase=`echo tagutils/tagutils.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT tagutils/tagutils.o -MD -MP -MF $depbase.Tpo -c -o tagutils/tagutils.o tagutils/tagutils.c &&\
+mv -f $depbase.Tpo $depbase.Po
+echo "  CC      " select.o;depbase=`echo select.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+gcc -DHAVE_CONFIG_H -I.    -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto -MT select.o -MD -MP -MF $depbase.Tpo -c -o select.o select.c &&\
+mv -f $depbase.Tpo $depbase.Po
+rm -f minidlnad
+echo "  CCLD    " minidlnad;gcc -Wall -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -g -O2 -flto   -o minidlnad minidlna.o upnphttp.o upnpdescgen.o upnpsoap.o upnpreplyparse.o minixml.o clients.o getifaddr.o process.o upnpglobalvars.o options.o minissdp.o uuid.o upnpevents.o sql.o utils.o metadata.o scanner.o monitor.o tivo_utils.o tivo_beacon.o tivo_commands.o playlist.o image_utils.o albumart.o log.o containers.o avahi.o tagutils/tagutils.o  select.o -ljpeg -lid3tag -lz -lsqlite3 -lavformat -lavcodec -lavutil -lz -lexif -lpng -lFLAC  -lvorbis -logg  -lpthread 
+make[2]: Leaving directory '/home/spider/Documents/minidlna'
+make[1]: Leaving directory '/home/spider/Documents/minidlna'
+make: Leaving directory '/home/spider/Documents/minidlna'
+ 

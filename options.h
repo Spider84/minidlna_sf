@@ -68,7 +68,13 @@ enum upnpconfigoptions {
 	JPEG_ICON_SM,
 	JPEG_ICON_LRG,
 #ifdef HAVE_LIBPNG
-	ICON					/* user-supplied PNG icon */
+	ICON,					/* user-supplied PNG icon */
+#endif
+#ifdef THUMBNAIL_CREATION
+	ENABLE_THUMB,                   /* enable thumbnail generation */
+	THUMB_WIDTH,                    /* thunbnail image with */
+	THUMB_QUALITY,                  /* thumnail image quality */
+	ENABLE_THUMB_FILMSTRIP,         /* film strip overlay */
 #endif
 };
 
