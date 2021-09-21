@@ -18,6 +18,8 @@
  * along with MiniDLNA. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "icons.h"
+
 #ifdef NETGEAR
 /* NG_Icon_48x48.png */
 unsigned char
@@ -2929,3 +2931,9 @@ jpeg_lrg[] = "\xff\xd8\xff\xe0\x00\x10\x4a\x46\x49\x46\x00\x01\x01\x01\x00\x5a\x
              "\x1e\x88\x20\xa8\xd8\xba\xe2\x7e\xdc\x26\x9a\x69\x08\xf7\x22\x22\x02\x82\x28\x82\x29\xe8\x88\x9e"
              "\xda\x69\xa6\x90\x8f\xff\xd9";
 #endif
+
+struct icon_struct icons = {
+	{ png_lrg, png_sm, jpeg_lrg, jpeg_sm },
+	{ sizeof (png_lrg)-1, sizeof (png_sm)-1, sizeof (jpeg_lrg)-1, sizeof (jpeg_sm)-1 },
+	{ 0, 0, 0, 0 }
+};

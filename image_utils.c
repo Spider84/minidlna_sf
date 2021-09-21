@@ -31,7 +31,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+/* phg.h brings in setjmp.h; you can't include both */
+#ifdef HAVE_LIBPNG
+#include <png.h>
+#else
 #include <setjmp.h>
+#endif
 #include <jpeglib.h>
 #ifdef HAVE_MACHINE_ENDIAN_H
 #include <machine/endian.h>
@@ -571,6 +576,358 @@ image_new_from_jpeg(const char *path, int is_file, const uint8_t *buf, int size,
 		fclose(file);
 
 	return vimage;
+}
+
+#ifdef HAVE_LIBPNG
+static void
+_png_read_data (png_structp png_ptr, png_bytep data, png_size_t length)
+{
+	struct _iu_png_io_struct *iu_png_io = png_get_io_ptr (png_ptr);
+	if (iu_png_io->fp)
+	{
+		if ((fread (data, 1, length, iu_png_io->fp)) < length)
+		{
+			if (ferror (iu_png_io->fp))
+				png_error (png_ptr, "file read error");
+		}
+	}
+	else
+	{
+		size_t bytes = (length < iu_png_io->count) ?
+			length : iu_png_io->count;
+		if (((iu_png_io->count) <= 0) && (length > 0))
+			png_error (png_ptr, "read buffer empty");
+		memcpy (data, iu_png_io->bufp, bytes);
+		iu_png_io->bufp += bytes;
+		iu_png_io->count -= bytes;
+	}
+}
+
+image_s *
+image_new_from_png(const char *path, int is_file, const uint8_t *buf, int size, int scale, int rotate, int *alpha)
+{
+	image_s *vimage = NULL;
+	FILE  *file = NULL;
+	struct _iu_png_io_struct iu_png_io;
+	int x, y, w, h;
+
+	png_bytepp row_pointers;
+	uint32_t *ptr;
+	png_uint_32 width, height;
+	int bit_depth, color_type, interlace_type, compression_type, filter_method;
+
+	png_structp png_ptr;
+	png_infop info_ptr, end_ptr;
+
+	/* sanity check */
+	if (scale <= 0)
+		scale = 1;
+
+	if( is_file )
+	{
+		if( (file = fopen(path, "rb")) == NULL )
+		{
+			return NULL;
+		}
+		iu_png_io.fp = file;
+		iu_png_io.buf = NULL;
+		iu_png_io.count = 0;
+	}
+	else
+	{
+		iu_png_io.fp = NULL;
+		iu_png_io.buf = iu_png_io.bufp = (uint8_t *)buf;
+		iu_png_io.count = size;
+	}
+
+
+	png_ptr = png_create_read_struct (PNG_LIBPNG_VER_STRING, NULL,NULL,NULL);
+	if (!png_ptr)
+	{
+		if (is_file)
+			fclose (file);
+		return NULL;
+	}
+
+	info_ptr = png_create_info_struct (png_ptr);
+	if (!info_ptr)
+	{
+		png_destroy_read_struct (&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
+		if (is_file)
+			fclose (file);
+		return NULL;
+	}
+	end_ptr = png_create_info_struct (png_ptr);
+	if (!end_ptr)
+	{
+		png_destroy_read_struct (&png_ptr, &info_ptr, (png_infopp)NULL);
+		if (is_file)
+			fclose (file);
+		return NULL;
+	}
+
+	if (setjmp (png_jmpbuf (png_ptr)))
+	{
+		png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
+		if (is_file)
+			fclose (file);
+		if (vimage)
+			image_free (vimage);
+		return NULL;
+	}
+
+	png_set_read_fn (png_ptr, &iu_png_io, _png_read_data);
+
+	png_read_png (png_ptr, info_ptr,
+			PNG_TRANSFORM_STRIP_16|
+			PNG_TRANSFORM_PACKING|PNG_TRANSFORM_EXPAND,
+			NULL);
+
+	//png_read_update_info (png_ptr, info_ptr);
+	png_get_IHDR(png_ptr, info_ptr, &width, &height,
+			&bit_depth, &color_type, &interlace_type,
+			&compression_type, &filter_method);
+
+	w = width;
+	h = height;
+
+	DPRINTF (E_MAXDEBUG, L_METADATA,
+			"Read %s (%dx%dx%d)\n", path, (int)w, (int)h, (int)bit_depth);
+
+	row_pointers = png_get_rows (png_ptr, info_ptr);
+
+	if (alpha)
+		*alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0;
+
+	/* The use of "scale" doesn't make such a big difference, but it does
+	 * speed up the eventual resize and makes this memory pig a little
+	 * lighter */
+	vimage = image_new(w/scale, h/scale);
+	if(!vimage)
+	{
+		png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
+		if( is_file )
+			fclose(file);
+		return NULL;
+	}
+
+	ptr = vimage->buf;
+
+	if ((color_type == PNG_COLOR_TYPE_GRAY) || 
+		(color_type == PNG_COLOR_TYPE_GRAY_ALPHA))
+	{
+		for (y = 0; y < h; y++) {
+			png_bytep p = row_pointers[y];
+			for (x = 0; x < w; x++)
+			{
+				if (color_type & PNG_COLOR_MASK_ALPHA)
+				{
+					*(ptr++) = COL_FULL (*p, *p, *p, *(p+1));
+					p += scale*2;
+				}
+				else
+				{
+					*(ptr++) = COL (*p, *p, *p);
+					p += scale;
+				}
+			}
+		}
+	}
+	else if ((color_type == PNG_COLOR_TYPE_RGB) ||
+			 (color_type == PNG_COLOR_TYPE_RGBA))
+	{
+		for (y = 0; y < h; y += scale) {
+			png_bytep p = row_pointers[y];
+			for (x = 0; x < w; x += scale)
+			{
+				if (color_type & PNG_COLOR_MASK_ALPHA)
+				{
+					*(ptr++) = COL_FULL (*p, *(p+1), *(p+2), *(p+3));
+					p += scale*4;
+				}
+				else
+				{
+					*(ptr++) = COL (*p, *(p+1), *(p+2));
+					p += scale*3;
+				}
+			}
+		}
+	}
+	else
+	{
+		DPRINTF (E_MAXDEBUG, L_METADATA,
+				"%s: Unexpected color type encountered\n", path);
+		image_free (vimage);
+		vimage = NULL;
+	}
+
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
+	if( is_file )
+		fclose(file);
+	return vimage;
+}
+
+static void
+_png_write_data (png_structp png_ptr, png_bytep data, png_size_t length)
+{
+	struct _iu_png_io_struct *iu_png_io = png_get_io_ptr (png_ptr);
+	if (iu_png_io->fp)
+	{
+		if ((fwrite (data, 1, length, iu_png_io->fp)) < length)
+			png_error (png_ptr, "file write error");
+	}
+	else
+	{
+		png_bytep scratch;
+		scratch = realloc (iu_png_io->buf, iu_png_io->count+length);
+		if (!scratch)
+			png_error (png_ptr, "memory allocation error");
+		iu_png_io->buf = scratch;
+		memcpy (iu_png_io->buf + iu_png_io->count, data, length);
+		iu_png_io->count += length;
+	}
+}
+
+static void
+_png_flush_data (png_structp png_ptr)
+{
+	struct _iu_png_io_struct *iu_png_io = png_get_io_ptr (png_ptr);
+	if (iu_png_io->fp)
+	{
+		if ((fflush (iu_png_io->fp)) == EOF)
+			png_error (png_ptr, "flush error");
+	}
+}
+
+size_t
+image_save_to_png (const image_s *img, char *path,
+		uint8_t **buf, int alpha, int compression)
+{
+	int is_file = (path != (char *)NULL);
+	FILE *file = NULL;
+	uint32_t *ibp;
+	png_bytep p, png_imgbuf;
+	struct _iu_png_io_struct iu_png_io;
+	png_structp png_ptr;
+	png_infop info_ptr;
+	png_bytepp row_pointers;
+
+	int x,y;
+
+	png_ptr = png_create_write_struct (PNG_LIBPNG_VER_STRING,
+			NULL, NULL, NULL);
+
+	if (!png_ptr)
+		return -1;
+
+	info_ptr = png_create_info_struct (png_ptr);
+	if (!info_ptr)
+	{
+		png_destroy_write_struct (&png_ptr, (png_infopp)NULL);
+		return -1;
+	}
+
+	if (is_file)
+	{
+		file = fopen (path, "wb");
+		if (file == (FILE *)NULL)
+		{
+			png_destroy_write_struct (&png_ptr, &info_ptr);
+			return -1;
+		}
+		iu_png_io.fp = file;
+	}
+	else
+	{
+		iu_png_io.fp = NULL;
+		iu_png_io.buf = NULL;
+		iu_png_io.count = 0;
+	}
+
+	if (setjmp (png_jmpbuf (png_ptr)))
+	{
+		png_destroy_write_struct (&png_ptr, &info_ptr);
+		if (is_file)
+			fclose (file);
+		return -1;
+	}
+
+	png_set_filter (png_ptr, 0, PNG_FILTER_NONE);
+	png_set_IHDR (png_ptr, info_ptr, img->width, img->height, 8,
+			alpha ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB,
+			PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+			PNG_FILTER_TYPE_DEFAULT);
+
+	if ((compression >= 0) && (compression <= 9))
+	    png_set_compression_level (png_ptr, compression);
+
+	row_pointers = malloc (img->height * sizeof (png_bytep));
+	png_imgbuf = malloc (img->height * img->width * (alpha ? 4:3));
+
+	p = png_imgbuf;
+	ibp = img->buf;
+
+	for (y = 0; y < img->height; y++)
+	{
+		row_pointers[y] = p;
+		for (x = 0; x < img->width; x++)
+		{
+			*(p++) = (*ibp >> 24) & 0xff;
+			*(p++) = (*ibp >> 16) & 0xff;
+			*(p++) = (*ibp >> 8) & 0xff;
+			if (alpha)
+				*(p++) = *ibp & 0xff;
+			++ibp;
+		}
+	}
+
+	png_set_rows (png_ptr, info_ptr, row_pointers);
+
+	png_set_write_fn (png_ptr, 
+			&iu_png_io,
+			_png_write_data, _png_flush_data);
+
+	png_write_png (png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+
+	if (is_file)
+	{
+		fclose (file);
+		return 0;
+	}
+
+	*buf = iu_png_io.buf;
+	return iu_png_io.count;
+}
+
+
+#endif	/* HAVE_LIBPNG */
+
+void
+image_bgcolor_composite (image_s *img, uint32_t bgcolor)
+{
+	int j;
+	uint32_t *p = img->buf;
+
+	double r,g,b,a, rbg,gbg,bbg;
+
+	rbg = (double)((bgcolor >> 16) & 0xff) / 255.0;
+	gbg = (double)((bgcolor >> 8) & 0xff) / 255.0;
+	bbg = (double)(bgcolor & 0xff) / 255.0;
+
+	for (j = 0; j < (img->height * img->width); j++)
+	{
+		uint8_t br,bg,bb;
+		r = (double)(*p >> 24) / 255.0;
+		g = (double)((*p >> 16) & 0xff) / 255.0;
+		b = (double)((*p >> 8) & 0xff) / 255.0;
+		a = (double)(*p & 0xff) / 255.0;
+
+		br = (r * a + rbg*(1 - a)) * 255;
+		bg = (g * a + gbg*(1 - a)) * 255;
+		bb = (b * a + bbg*(1 - a)) * 255;
+
+		*(p++) = COL (br,bg,bb);
+	}
 }
 
 void
