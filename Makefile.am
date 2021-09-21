@@ -56,6 +56,7 @@ minidlnad_LDADD = \
 	@LIBSQLITE3_LIBS@ \
 	@LIBAVFORMAT_LIBS@ \
 	@LIBEXIF_LIBS@ \
+	@LIBPNG_LIBS@ \
 	@LIBINTL@ \
 	@LIBICONV@ \
 	-lFLAC $(flacogglibs) $(vorbislibs) $(avahilibs)
@@ -68,6 +69,7 @@ testupnpdescgen_LDADD = \
 	@LIBAVFORMAT_LIBS@ \
 	@LIBAVUTIL_LIBS@ \
 	@LIBEXIF_LIBS@ \
+	@LIBPNG_LIBS@ \	
 	-lFLAC $(flacogglibs) $(vorbislibs) $(avahilibs)
 
 SUFFIXES = .tmpl .

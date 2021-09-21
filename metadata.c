@@ -511,8 +511,8 @@ libjpeg_error_handler(j_common_ptr cinfo)
 	return;
 }
 
-int64_t
-GetImageMetadata(const char *path, const char *name)
+static int64_t
+_get_jpeg_metadata(const char *path, const char *name)
 {
 	ExifData *ed;
 	ExifEntry *e = NULL;
@@ -679,6 +679,294 @@ no_exifdata:
 	free_metadata(&m, free_flags);
 
 	return ret;
+}
+
+#define BE32(b) (*(b)<<24) | (*((b)+1)<<16) | (*((b)+2)<<8) | *((b)+3)
+
+static uint8_t *
+_png_readchunk (FILE *file, size_t size)
+{
+	uint8_t *buf = malloc (size);
+
+	if (buf == (uint8_t *)NULL)
+		return NULL;
+
+	if (fread (buf, 1, size, file) != size)
+	{
+		free (buf);
+		return NULL;
+	}
+	/* seek past the checksum */
+	if (fseek (file, 4, SEEK_CUR))
+	{
+		free (buf);
+		return NULL;
+	}
+	return buf;
+}
+
+static int64_t
+_get_png_metadata (const char *path, const char *name)
+{
+	FILE *file;
+	uint32_t width=0, height=0;
+	int thumb=0;
+	int got_header = 0;
+	struct stat statbuf;
+	int64_t ret;
+	metadata_t m;
+	memset(&m, '\0', sizeof(metadata_t));
+	uint8_t tagbuf[8];
+	uint32_t free_flags = 0xFFFFFFFF;
+
+	if ( stat(path, &statbuf) != 0 )
+		return 0;
+	strip_ext((char *)name);
+
+	if ((file = fopen (path, "rb")) == (FILE *)NULL)
+	{
+		DPRINTF (E_ERROR, L_METADATA, "Error opening \"%s\": %s\n",
+				path, strerror (errno));
+		return 0;
+	}
+
+	if (fread (tagbuf, 1, 8, file) != 8)
+	{
+		fclose (file);
+		return 0;
+	}
+
+	if (memcmp (tagbuf, "\x89PNG\x0d\x0a\x1a\x0a", 8))
+	{
+		DPRINTF (E_WARN, L_METADATA,
+				"\"%s\" not a PNG file.\n", path);
+		fclose (file);
+		return 0;
+	}
+
+	/* Go through the chunks */
+
+	for (;;)
+	{
+		int32_t chunksize;
+		char *chunkname[5];
+		uint8_t *buf;
+
+		if ((fread (tagbuf, 1, 8, file)) != 8)
+		{
+			DPRINTF (E_WARN, L_METADATA,
+					"%s: Premature EOF.\n", path);
+			fclose (file);
+			free_metadata(&m, free_flags);
+			return 0;
+		}
+		chunksize = BE32 (&tagbuf[0]);
+		memcpy (chunkname, &tagbuf[4], 4);
+		chunkname[4] = '\x00';
+
+		if (!memcmp (&tagbuf[4], "IEND", 4))
+		{
+			break;
+		}
+		else if (chunksize <= 0)
+		{
+			if (fseek (file, 4, SEEK_CUR))
+			{
+				DPRINTF (E_WARN, L_METADATA,
+						"%s: Seek error.\n", path);
+				fclose (file);
+				free_metadata(&m, free_flags);
+				return 0;
+			}
+			continue;
+		}
+		else if (!memcmp (&tagbuf[4], "IHDR", 4)) {
+			if ((buf = _png_readchunk (file, chunksize)) == NULL)
+			{
+				fclose (file);
+				free_metadata(&m, free_flags);
+				return 0;
+			}
+			got_header = 1;
+
+			/* width and height are 32-bit BE starting at offset 0 */
+			width = BE32 (&buf[0]);
+			height = BE32 (&buf[4]);
+			free (buf);
+			continue;
+		}
+		else if (!memcmp (&tagbuf[4], "tIME", 4))
+		{
+			if ((buf = _png_readchunk (file, chunksize)) == NULL)
+			{
+				fclose (file);
+				free_metadata(&m, free_flags);
+				return 0;
+			}
+			if (m.date)
+				free (m.date);
+
+			xasprintf (&m.date, "%04d-%02d-%02dT%02d:%02d:%02d",
+					(int)(buf[0]<<8 | buf[1]),
+					(int)buf[2], (int)buf[3],
+					(int)buf[4], (int)buf[5], (int)buf[6]);
+			free (buf);
+			continue;
+		}
+		else if (!memcmp (&tagbuf[4], "tEXt", 4) || 
+				!memcmp (&tagbuf[4], "iTXt", 4))
+		{
+			int international = !memcmp (&tagbuf[4], "iTXt", 4),
+					remaining = chunksize;
+			char *keyword, *value;
+			uint8_t *textp;
+			int l;
+
+			if ((buf = _png_readchunk (file, chunksize)) == NULL)
+			{
+				fclose (file);
+				free_metadata(&m, free_flags);
+				return 0;
+			}
+
+			textp = buf;
+			keyword = (char *)buf;
+			l = strlen (keyword) + 1;
+			textp += l;
+			if ((remaining -= l) <= 0)
+				goto textdone;
+
+			if (international)
+			{
+				char *lang;
+
+				if (*textp)
+					/* compressed */
+					goto textdone;
+
+				textp += 2;
+				if ((remaining -= 2) <= 0)
+					goto textdone;
+
+				/* language */
+				lang = (char *)textp;
+				l = strlen (lang) + 1;
+				textp += l;
+				if ((remaining -= l) <= 0)
+					goto textdone;
+
+				/* translated keyword */
+				l = strlen ((char *)textp) + 1;
+				textp += l;
+				if ((remaining -= l) <= 0)
+					goto textdone;
+			}
+
+			/* whatever's left is the value */
+			if ((value = malloc (remaining + 1)) == (char *)NULL)
+			{
+				DPRINTF (E_ERROR, L_METADATA, "Allocation error.\n");
+				free (buf);
+				fclose (file);
+				free_metadata(&m, free_flags);
+				return 0;
+			}
+
+			memcpy (value, textp, remaining);
+			value[remaining] = '\0';
+
+			if (!strcmp (keyword, "Title"))
+			{
+				if (m.title)
+					free (m.title);
+				m.title = value;
+			}
+			else if (!strcmp (keyword, "Author"))
+			{
+				if (m.creator)
+					free (m.creator);
+				m.creator = value;
+			}
+			else
+			{
+				free (value);
+			}
+
+textdone:
+			free (buf);
+		}
+		else
+		{
+			/* move on to the next chunk */
+			if (fseek (file, chunksize+4, SEEK_CUR))
+			{
+				DPRINTF (E_WARN, L_METADATA,
+						"%s: Seek error.\n", path);
+				fclose (file);
+				free_metadata(&m, free_flags);
+				return 0;
+			}
+		}
+	}
+	fclose (file);
+
+	if (!got_header)
+	{
+		DPRINTF (E_WARN, L_METADATA,
+				"%s: No PNG header.\n", path);
+		free_metadata (&m, free_flags);
+		return 0;
+	}
+
+	xasprintf(&m.resolution, "%dx%d", (int)width, (int)height);
+	m.rotation = 0;
+	thumb = 0;
+	m.dlna_pn = NULL;
+	m.mime = strdup("image/png");
+
+	if (!m.title)
+		m.title = strdup (name);
+
+	DPRINTF (E_MAXDEBUG, L_METADATA,
+			"Processed \"%s\":\n  Name: %s\n  Resolution: %s\n",
+			path, name, m.resolution);
+
+	ret = sql_exec(db, "INSERT into DETAILS"
+	                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
+	                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
+	                   "VALUES"
+	                   " (%Q, '%q', %lld, %lld, %Q, %Q, %u, %d, %Q, %Q, %Q);",
+	                   path, m.title, (long long)statbuf.st_size,
+					   (long long)statbuf.st_mtime, m.date, m.resolution,
+					   m.rotation, thumb, m.creator, m.dlna_pn, m.mime);
+	if( ret != SQLITE_OK )
+	{
+		DPRINTF(E_ERROR, L_METADATA, "Error inserting details for '%s'!\n", path);
+		ret = 0;
+	}
+	else
+	{
+		ret = sqlite3_last_insert_rowid(db);
+	}
+	free_metadata(&m, FLAG_MIME | FLAG_RESOLUTION);
+
+	return ret;
+}
+
+
+int64_t
+GetImageMetadata(const char *path, const char *name)
+{
+	if (ends_with (path, ".jpg") || ends_with (path, ".jpeg"))
+	{
+		return _get_jpeg_metadata (path, name);
+	}
+	else if (ends_with (path, ".png"))
+	{
+		return _get_png_metadata (path, name);
+	}
+	else
+		return 0;
 }
 
 int64_t
