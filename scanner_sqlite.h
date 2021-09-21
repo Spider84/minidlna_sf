@@ -72,7 +72,7 @@ char create_bookmarkTable_sqlite[] = "CREATE TABLE BOOKMARKS ("
 					"DETAIL_ID INTEGER, "
 					"CLIENT_MAC TEXT NOT NULL, "
 					"SEC INTEGER, "
-					"WATCH_COUNT INTEGER"
+					"WATCH_COUNT INTEGER, "
 					"PRIMARY KEY (DETAIL_ID, CLIENT_MAC)"
 					");";
 
