@@ -99,6 +99,7 @@ struct client_type_s {
 struct client_cache_s {
 	struct in_addr addr;
 	unsigned char mac[6];
+	char macstr[18];
 	struct client_type_s *type;
 	time_t age;
 	int connections;
