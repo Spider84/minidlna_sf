@@ -24,6 +24,7 @@ struct magic_container_s {
 	const char *parentid_sql;
 	const char *refid_sql;
 	const char *child_count;
+	const char *left_join;
 	const char *where;
 	const char *orderby;
 	int max_count;

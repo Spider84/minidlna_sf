@@ -74,7 +74,8 @@ static const struct {
 	{ PNG_ICON_SM, "png_icon_sm" },
 	{ PNG_ICON_LRG, "png_icon_lrg" },
 	{ JPEG_ICON_SM, "jpeg_icon_sm" },
-	{ JPEG_ICON_LRG, "jpeg_icon_lrg" }	
+	{ JPEG_ICON_LRG, "jpeg_icon_lrg" },
+	{ HTTP_HOST_NAME, "http_host_name" },
 };
 
 int

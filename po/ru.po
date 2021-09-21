@@ -89,6 +89,12 @@ msgstr "Списки Воспроизведения"
 msgid "Recently Added"
 msgstr "Недавно Добавлено"
 
+msgid "Recently Played"
+msgstr "Недавно открытое"
+
+msgid "Recently Viewed"
+msgstr "Недавно просмотреное"
+
 #: scanner.c:536
 msgid "Video"
 msgstr "Видео"

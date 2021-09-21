@@ -663,8 +663,12 @@ ProcessSSDPRequest(struct event *ev)
 		else if (st && (st_len > 0))
 		{
 			int l;
+			char *host;
+			if (strlen(http_host_name)>3) {
+				host = http_host_name;
+			} else {
 #ifdef __linux__
-			char host[40] = "127.0.0.1";
+			char _host[40] = "127.0.0.1";
 			struct cmsghdr *cmsg;
 
 			/* find the interface we received the msg from */
@@ -679,7 +683,7 @@ ProcessSSDPRequest(struct event *ev)
 
 				pi = (struct in_pktinfo *)CMSG_DATA(cmsg);
 				addr = pi->ipi_spec_dst;
-				inet_ntop(AF_INET, &addr, host, sizeof(host));
+				inet_ntop(AF_INET, &addr, _host, sizeof(host));
 				for (i = 0; i < n_lan_addr; i++)
 				{
 					if (pi->ipi_ifindex == lan_addr[i].ifindex)
@@ -687,7 +691,7 @@ ProcessSSDPRequest(struct event *ev)
 				}
 			}
 #else
-			const char *host;
+			const char *_host;
 			int iface = 0;
 			/* find in which sub network the client is */
 			for (i = 0; i < n_lan_addr; i++)
@@ -699,8 +703,10 @@ ProcessSSDPRequest(struct event *ev)
 					break;
 				}
 			}
-			host = lan_addr[iface].str;
+			_host = lan_addr[iface].str;
 #endif
+				host = _host;
+			}
 			if (n_lan_addr == i)
 			{
 				if (runtime_vars.nonlocal_iface >= 0) {
