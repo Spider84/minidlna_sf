@@ -56,6 +56,7 @@ struct runtime_vars_s {
 	int thumb_width;
 	int thumb_quality;
 #endif
+	int keep_alive;
 };
 
 struct string_s {

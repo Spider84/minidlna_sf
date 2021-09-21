@@ -253,7 +253,7 @@ SendSSDPResponse(int s, struct sockaddr_in sockname, int st_no,
 		"LOCATION: http://%s:%u" ROOTDESC_PATH "\r\n"
 		"Content-Length: 0\r\n"
 		"\r\n",
-		(runtime_vars.notify_interval<<1)+10,
+		(runtime_vars.keep_alive),
 		tmstr,
 		known_service_types[st_no],
 		(st_no > 1 ? "1" : ""),
@@ -273,7 +273,7 @@ SendSSDPResponse(int s, struct sockaddr_in sockname, int st_no,
 
 void
 SendSSDPNotifies(int s, const char *host, unsigned short port,
-                 unsigned int interval)
+                 unsigned int interval, unsigned int keep_alive)
 {
 	struct sockaddr_in sockname;
 	int l, n, dup, i=0;
@@ -304,7 +304,7 @@ SendSSDPNotifies(int s, const char *host, unsigned short port,
 					"NTS:ssdp:alive\r\n"
 					"\r\n",
 					SSDP_MCAST_ADDR, SSDP_PORT,
-					lifetime,
+					keep_alive,
 					host, port,
 					known_service_types[i],
 					(i > 1 ? "1" : ""),

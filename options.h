@@ -75,6 +75,7 @@ enum upnpconfigoptions {
 	THUMB_QUALITY,                  /* thumnail image quality */
 	ENABLE_THUMB_FILMSTRIP,         /* film strip overlay */
 #endif
+	KEEP_ALIVE,
 };
 
 /* readoptionsfile()

@@ -82,6 +82,7 @@ static const struct {
 	{ THUMB_QUALITY, "thumbnail_quality" },
 	{ ENABLE_THUMB_FILMSTRIP, "enable_thumbnail_filmstrip" },
 #endif
+	{ KEEP_ALIVE, "keep_alive" },
 };
 
 int

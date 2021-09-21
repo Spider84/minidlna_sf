@@ -756,6 +756,7 @@ init(int argc, char **argv)
 	runtime_vars.thumb_width = 160;
 	runtime_vars.thumb_quality = 8;
 #endif
+	runtime_vars.keep_alive = (runtime_vars.notify_interval<<1)+10;
 
 	/* read options file first since
 	 * command line arguments have final say */
@@ -1032,6 +1033,9 @@ init(int argc, char **argv)
 				SETFLAG(THUMB_FILMSTRIP);
 		break;
 #endif
+		case KEEP_ALIVE:
+			runtime_vars.keep_alive = atoi(ary_options[i].value);
+			break;
 		default:
 			DPRINTF(E_ERROR, L_GENERAL, "Unknown option in file %s\n",
 				optionsfile);
@@ -1454,7 +1458,7 @@ main(int argc, char **argv)
 			for (i = 0; i < n_lan_addr; i++)
 			{
 				SendSSDPNotifies(lan_addr[i].snotify, lan_addr[i].str,
-					runtime_vars.port, runtime_vars.notify_interval);
+					runtime_vars.port, runtime_vars.notify_interval, runtime_vars.keep_alive);
 			}
 			lastnotifytime = timeofday;
 			timeout = runtime_vars.notify_interval * 1000;

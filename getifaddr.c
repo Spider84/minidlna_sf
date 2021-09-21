@@ -343,7 +343,7 @@ reload_ifaces(int force_notify)
 				lan_addr[i].str, inet_ntoa(lan_addr[i].mask));
 			SendSSDPGoodbyes(lan_addr[i].snotify);
 			SendSSDPNotifies(lan_addr[i].snotify, lan_addr[i].str,
-					runtime_vars.port, runtime_vars.notify_interval);
+					runtime_vars.port, runtime_vars.notify_interval, runtime_vars.keep_alive);
 		}
 	}
 }
